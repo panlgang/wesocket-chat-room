@@ -1,7 +1,15 @@
 package com.github.excellent.service;
+import com.github.excellent.entity.Message2Clinet;
+import com.github.excellent.entity.MessageFromClient;
+import com.github.excellent.utils.CommonUtils;
+
 import javax.websocket.*;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
@@ -14,16 +22,30 @@ import java.util.concurrent.CopyOnWriteArraySet;
 public class WebSocket {
     //存储所有的websocket
     private static CopyOnWriteArraySet<WebSocket> set = new CopyOnWriteArraySet<>();
+
+    // 用户列表
+    private static Map<String,String> map = new ConcurrentHashMap<>();
+
     // 浏览器的会话
     private Session session;
+    // 用户名
+    private String userName;
 
     @OnOpen
     // 建立连接调用
     public void onOpen(Session session){
         this.session = session;
+        this.userName = session.getQueryString().split("=")[1];
         set.add(this);
-        System.out.println("新的连接，当前SessionId为" + session.getId());
+        map.put(session.getId(),userName);
+        System.out.println("新的连接，SessionId为" + session.getId());
         System.out.println("当前共有" + set.size() + "人");
+        Message2Clinet message2Clinet = new Message2Clinet();
+        message2Clinet.setContent(userName + "上线了");
+        // 更新用户列表
+        message2Clinet.setNames(map);
+        String message = CommonUtils.object2Json(message2Clinet);
+        allSend(message);
     }
 
     @OnError
@@ -34,17 +56,38 @@ public class WebSocket {
 
     @OnMessage  // 收到信息调用
     public void onMessage(String message){
-        for(WebSocket webSocket : set){
-            webSocket.sendMessage(message);
-        }
+       MessageFromClient client = (MessageFromClient) CommonUtils.Json2Object(message,MessageFromClient.class);
+       String type = client.getType();
+       String content = userName + "说：" +  client.getMsg();
+       // "0-1-2-3-"
+       String to = client.getTo();
+       Message2Clinet message2Clinet = new Message2Clinet();
+       message2Clinet.setContent(content);
+       message2Clinet.setNames(map);
+       String mess = CommonUtils.object2Json(message2Clinet);
+       if("1".equals(type)){
+          allSend(mess);
+       }else if("2".equals(type)){
+           List<String> list = Arrays.asList(to.split("-"));
+           notAllSend(mess,list);
+       }
     }
 
     @OnClose
     // 关闭连接时调用
     public void onClose(){
-        System.out.println("有用户退出连接");
         set.remove(this);
-        System.out.println("当前聊天室还剩下：" + set.size() + "人");
+        map.remove(session.getId());
+        System.out.println("有连接下线，SessionId为" + session.getId());
+        System.out.println("当前共有" + set.size() + "人");
+
+        Message2Clinet message2Clinet = new Message2Clinet();
+        message2Clinet.setContent(userName + "下线了");
+
+        message2Clinet.setNames(map);
+
+        String message = CommonUtils.object2Json(message2Clinet);
+        allSend(message);
     }
 
     /**
@@ -56,6 +99,29 @@ public class WebSocket {
             this.session.getBasicRemote().sendText(message);
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * 群聊
+     * @param message
+     */
+    private void allSend(String message){
+        for(WebSocket webSocket : set){
+            webSocket.sendMessage(message);
+        }
+    }
+
+    /**
+     * 给部分用户发送（包含私聊）
+     * @param message
+     * @param list
+     */
+    private void notAllSend(String message,List<String> list){
+        for(WebSocket webSocket : set){
+            if(list.contains(webSocket.session.getId())){
+                webSocket.sendMessage(message);
+            }
         }
     }
 

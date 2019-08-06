@@ -23,7 +23,7 @@ public class LoginDao {
         String sql = "select * from USER where username = ? and password = ?";
         PreparedStatement statement = connection.prepareStatement(sql);
         statement.setString(1,userName);
-        statement.setString(2,password);
+        statement.setString(2,DigestUtils.md5Hex(password));
         ResultSet set = statement.executeQuery();
         return set.next();
     }
