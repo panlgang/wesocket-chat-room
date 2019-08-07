@@ -6,12 +6,10 @@ import com.github.excellent.utils.CommonUtils;
 import javax.websocket.*;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
-
+import java.io.*;
 /**
  * 服务器端
  * @auther plg
@@ -20,9 +18,11 @@ import java.util.concurrent.CopyOnWriteArraySet;
 
 @ServerEndpoint("/websocket")
 public class WebSocket {
-    //存储所有的websocket
+    //存储所有在线的websocket
     private static CopyOnWriteArraySet<WebSocket> set = new CopyOnWriteArraySet<>();
 
+    // 所有登录过的用户
+    private static Map<WebSocket,File> client = new ConcurrentHashMap<>();
     // 用户列表
     private static Map<String,String> map = new ConcurrentHashMap<>();
 
@@ -33,11 +33,19 @@ public class WebSocket {
 
     @OnOpen
     // 建立连接调用
-    public void onOpen(Session session){
+    public void onOpen(Session session) throws IOException {
         this.session = session;
         this.userName = session.getQueryString().split("=")[1];
         set.add(this);
+        File file = new File(userName + ".txt");
+        if(!file.exists()){
+            file.createNewFile();
+        }
+        String s = file.getAbsolutePath();
+        client.put(this,file);
         map.put(session.getId(),userName);
+
+
         System.out.println("新的连接，SessionId为" + session.getId());
         System.out.println("当前共有" + set.size() + "人");
         Message2Clinet message2Clinet = new Message2Clinet();
@@ -77,7 +85,7 @@ public class WebSocket {
     // 关闭连接时调用
     public void onClose(){
         set.remove(this);
-        map.remove(session.getId());
+        map.remove(userName);
         System.out.println("有连接下线，SessionId为" + session.getId());
         System.out.println("当前共有" + set.size() + "人");
 
@@ -123,7 +131,20 @@ public class WebSocket {
                 webSocket.sendMessage(message);
             }
         }
+
     }
 
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        WebSocket webSocket = (WebSocket) o;
+        return Objects.equals(userName, webSocket.userName);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(userName);
+    }
 }
