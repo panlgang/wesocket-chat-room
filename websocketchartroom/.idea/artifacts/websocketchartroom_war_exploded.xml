@@ -1,6 +1,6 @@
 <component name="ArtifactManager">
   <artifact type="exploded-war" name="websocketchartroom:war exploded">
-    <output-path>$PROJECT_DIR$/target/websocketchartroom-1.0-SNAPSHOT</output-path>
+    <output-path>D:/Tomcat/apache-tomcat-8.5.39/webapps/QQ</output-path>
     <root id="root">
       <element id="directory" name="WEB-INF">
         <element id="directory" name="classes">

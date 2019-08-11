@@ -24,7 +24,7 @@ public class FreeMarkerListener implements ServletContextListener {
         // 配置加载ftl的路径
         try {
             cfg.setDirectoryForTemplateLoading(
-                    new File("E:\\JAVA代码\\websocketchartroom\\src\\main\\webapp"));
+                    new File("E:\\websocket-chat-room\\websocketchartroom\\src\\main\\webapp"));
         } catch (IOException e) {
             e.printStackTrace();
         }

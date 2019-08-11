@@ -2,7 +2,7 @@ package com.github.excellent.service;
 import com.github.excellent.entity.Message2Clinet;
 import com.github.excellent.entity.MessageFromClient;
 import com.github.excellent.utils.CommonUtils;
-
+import com.github.excellent.utils.RandomCar;
 import javax.websocket.*;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
@@ -18,13 +18,17 @@ import java.io.*;
 
 @ServerEndpoint("/websocket")
 public class WebSocket {
+
     //存储所有在线的websocket
     private static CopyOnWriteArraySet<WebSocket> set = new CopyOnWriteArraySet<>();
 
     // 所有登录过的用户
     private static Map<WebSocket,File> client = new ConcurrentHashMap<>();
+
     // 用户列表
     private static Map<String,String> map = new ConcurrentHashMap<>();
+
+    private static ConcurrentHashMap<String,String> help = new ConcurrentHashMap<>();
 
     // 浏览器的会话
     private Session session;
@@ -36,20 +40,23 @@ public class WebSocket {
     public void onOpen(Session session) throws IOException {
         this.session = session;
         this.userName = session.getQueryString().split("=")[1];
-        set.add(this);
         File file = new File(userName + ".txt");
         if(!file.exists()){
             file.createNewFile();
         }
         String s = file.getAbsolutePath();
+        // 存储在线用户
+        set.add(this);
+        // 所有登录过的用户
         client.put(this,file);
+
         map.put(session.getId(),userName);
 
 
         System.out.println("新的连接，SessionId为" + session.getId());
         System.out.println("当前共有" + set.size() + "人");
         Message2Clinet message2Clinet = new Message2Clinet();
-        message2Clinet.setContent(userName + "上线了");
+        message2Clinet.setContent("【系统消息】" + userName + "驾驶着炫酷的" +  RandomCar.getCar() + "进入了聊天室！");
         // 更新用户列表
         message2Clinet.setNames(map);
         String message = CommonUtils.object2Json(message2Clinet);
